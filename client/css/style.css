@@ -1,0 +1,10 @@
+body {
+    font-family: Arial;
+    padding: 20px;
+  }
+  
+  div {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 5px;
+  }

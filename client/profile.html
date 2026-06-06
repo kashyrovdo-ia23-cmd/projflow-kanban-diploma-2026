@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProjFlow - Профіль</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <div class="max-w-3xl mx-auto p-8">
+    <div class="flex items-center justify-between mb-10">
+      <a href="dashboard.html" class="flex items-center gap-2 text-gray-600 hover:text-indigo-600 font-medium">
+        <i class="fas fa-arrow-left"></i>
+        <span>Назад до проєктів</span>
+      </a>
+      <h1 class="text-3xl font-bold text-gray-800">Мій профіль</h1>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm p-10">
+      <!-- Аватарка -->
+      <div class="flex flex-col items-center mb-10">
+        <div id="avatar-preview" 
+             class="w-32 h-32 bg-gray-200 rounded-3xl flex items-center justify-center text-6xl mb-4 overflow-hidden border-4 border-white shadow cursor-pointer"
+             onclick="document.getElementById('avatar-input').click()">
+          👤
+        </div>
+        <button onclick="document.getElementById('avatar-input').click()" 
+                class="text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
+          <i class="fas fa-camera"></i>
+          Змінити фото
+        </button>
+        <input type="file" id="avatar-input" accept="image/*" class="hidden" onchange="previewAndSaveAvatar(event)">
+      </div>
+
+      <!-- Інформація -->
+      <div class="space-y-8">
+        <div>
+          <label class="block text-sm font-medium text-gray-500 mb-1">Ім'я</label>
+          <input id="edit-name" type="text" 
+                 class="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-indigo-500 text-lg">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-500 mb-1">Email</label>
+          <p id="profile-email" class="text-lg text-gray-700"></p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-500 mb-1">Дата народження</label>
+          <input id="edit-birthdate" type="date" 
+                 class="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-500 mb-1">Дата реєстрації</label>
+          <p id="profile-registered" class="text-gray-700">2026 рік</p>
+        </div>
+      </div>
+
+      <!-- Кнопки -->
+      <div class="mt-12 flex gap-4">
+        <button onclick="saveProfile()" 
+                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-medium transition">
+          Зберегти зміни
+        </button>
+        <button onclick="logout()" 
+                class="flex-1 border border-red-500 text-red-500 hover:bg-red-50 py-4 rounded-2xl font-medium transition">
+          Вийти з акаунту
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    function loadProfile() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userKey = "profile_" + payload.email;   // ключ прив'язаний до email
+
+        document.getElementById("edit-name").value = localStorage.getItem(userKey + "_name") || payload.name || "";
+        document.getElementById("profile-email").textContent = payload.email || "";
+        document.getElementById("edit-birthdate").value = localStorage.getItem(userKey + "_birthdate") || "";
+        document.getElementById("profile-registered").textContent = "2026 рік";
+
+        const savedAvatar = localStorage.getItem(userKey + "_avatar");
+        if (savedAvatar) {
+          document.getElementById("avatar-preview").innerHTML = `<img src="${savedAvatar}" class="w-full h-full object-cover">`;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function previewAndSaveAvatar(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const imgData = e.target.result;
+        document.getElementById("avatar-preview").innerHTML = `<img src="${imgData}" class="w-full h-full object-cover">`;
+
+        const token = localStorage.getItem("token");
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const userKey = "profile_" + payload.email;
+          localStorage.setItem(userKey + "_avatar", imgData);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveProfile() {
+      const newName = document.getElementById("edit-name").value.trim();
+      const newBirthdate = document.getElementById("edit-birthdate").value;
+
+      if (!newName) {
+        alert("Ім'я не може бути порожнім");
+        return;
+      }
+
+      // Перевірка дати народження
+      if (newBirthdate) {
+        const birthDate = new Date(newBirthdate);
+        const today = new Date();
+
+        if (birthDate > today) {
+          alert("Дата народження не може бути в майбутньому!");
+          return;
+        }
+
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+
+        if (age < 16) {
+          alert("Ви повинні бути старше 16 років.");
+          return;
+        }
+        if (age > 100) {
+          alert("Дата народження не може бути старше 100 років.");
+          return;
+        }
+      }
+
+      // Зберігаємо з прив'язкою до email користувача
+      const token = localStorage.getItem("token");
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userKey = "profile_" + payload.email;
+
+        localStorage.setItem(userKey + "_name", newName);
+        if (newBirthdate) localStorage.setItem(userKey + "_birthdate", newBirthdate);
+      }
+
+      alert("✅ Зміни успішно збережено!");
+    }
+
+    function logout() {
+      if (confirm("Вийти з акаунту?")) {
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+      }
+    }
+
+    window.onload = loadProfile;
+  </script>
+</body>
+</html>
